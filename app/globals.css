@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import 'tw-animate-css';
+
+@layer base {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    overscroll-behavior: none;
+    font-family: var(--font-sans), 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    @apply bg-background text-foreground;
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #e1c0b0;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #9d4400;
+  }
+  * {
+    box-sizing: border-box;
+    @apply border-border;
+  }
+
+  /* ── Global focus-visible ring ──────────────────────────
+     Semua elemen interaktif yang difokus via keyboard
+     mendapat outline yang jelas (aksesibilitas).
+  */
+  :focus-visible {
+    outline: 2px solid theme('colors.primary.DEFAULT', #9d4400);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+  /* Remove default outline; replaced above by focus-visible */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+@layer components {
+  /* Material Symbols icon helper */
+  .ms {
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 20px;
+    display: inline-block;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    user-select: none;
+  }
+
+  /* Status chip variants */
+  .chip-selesai {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-label-md text-label-md font-semibold;
+    background-color: #ECFDF5;
+    color: #065F46;
+    border: 1px solid #A7F3D0;
+  }
+  .chip-menunggu {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-label-md text-label-md font-semibold;
+    background-color: #FFFBEB;
+    color: #92400E;
+    border: 1px solid #FDE68A;
+  }
+  .chip-ditolak {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-label-md text-label-md font-semibold;
+    background-color: #FEF2F2;
+    color: #991B1B;
+    border: 1px solid #FECACA;
+  }
+  .chip-draft {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-label-md text-label-md font-semibold;
+    background-color: #F1F5F9;
+    color: #475569;
+    border: 1px solid #E2E8F0;
+  }
+
+  /* Number with tabular figures */
+  .tabular-nums {
+    font-feature-settings: 'tnum' 1, 'cv05' 1;
+    font-variant-numeric: tabular-nums;
+  }
+}
