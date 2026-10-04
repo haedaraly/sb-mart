@@ -1,262 +1,333 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import { useToast } from '@/components/ui/Toast'
 
+interface LocationOption {
+  code: string
+  name: string
+}
+
+interface CategoryOption {
+  name: string
+}
+
+interface PurchaseItemForm {
+  name: string
+  qty: string
+  unit: string
+  category: string
+  price: string
+}
+
+const newItem = (): PurchaseItemForm => ({ name: '', qty: '1', unit: 'pcs', category: '', price: '' })
+
+function localDate() {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${now.getFullYear()}-${month}-${day}`
+}
+
 export default function TambahPembelianPage() {
-  const router = useRouter()
   const { success, error: toastError } = useToast()
   const [submitting, setSubmitting] = useState(false)
+  const [locations, setLocations] = useState<LocationOption[]>([])
+  const [categories, setCategories] = useState<CategoryOption[]>([])
+  const [locationsLoading, setLocationsLoading] = useState(true)
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
+  const [date, setDate] = useState(localDate)
+  const [location, setLocation] = useState('')
+  const [items, setItems] = useState<PurchaseItemForm[]>([newItem()])
 
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
-  const [location, setLocation] = useState('Gedung Shofiyah - TU')
-  const [description, setDescription] = useState('')
-  const [items, setItems] = useState([
-    { name: '', qty: 1, unit: 'pcs', price: 0 },
-  ])
+  useEffect(() => {
+    let active = true
+    async function loadOptions() {
+      try {
+        const [locationResponse, categoryResponse] = await Promise.all([
+          fetch('/api/locations', { cache: 'no-store' }),
+          fetch('/api/purchase-categories', { cache: 'no-store' }),
+        ])
+        const [locationData, categoryData] = await Promise.all([
+          locationResponse.json(),
+          categoryResponse.json(),
+        ])
+        if (!locationResponse.ok) {
+          throw new Error(locationData.error || 'Gagal memuat daftar gedung.')
+        }
+        if (!categoryResponse.ok) {
+          throw new Error(categoryData.error || 'Gagal memuat daftar kategori.')
+        }
+        if (active) {
+          setLocations(locationData)
+          setLocation(locationData[0]?.code ?? '')
+          setCategories(categoryData.map((name: string) => ({ name })))
+        }
+      } catch (err) {
+        if (active) {
+          toastError(err instanceof Error ? err.message : 'Gagal memuat data pembelian.')
+        }
+      } finally {
+        if (active) {
+          setLocationsLoading(false)
+          setCategoriesLoading(false)
+        }
+      }
+    }
+    loadOptions()
+    return () => {
+      active = false
+    }
+  }, [toastError])
 
-  const addItem = () => {
-    setItems((prev) => [...prev, { name: '', qty: 1, unit: 'pcs', price: 0 }])
+  const addItem = () => setItems((current) => [...current, newItem()])
+
+  const removeItem = (index: number) => {
+    setItems((current) => current.length > 1 ? current.filter((_, i) => i !== index) : current)
   }
 
-  const removeItem = (idx: number) => {
-    if (items.length === 1) return
-    setItems((prev) => prev.filter((_, i) => i !== idx))
-  }
-
-  const updateItem = (idx: number, field: string, value: any) => {
-    setItems((prev) =>
-      prev.map((it, i) => (i === idx ? { ...it, [field]: value } : it))
-    )
+  const updateItem = (index: number, field: keyof PurchaseItemForm, value: string) => {
+    setItems((current) => current.map((item, i) => (
+      i === index ? { ...item, [field]: value } : item
+    )))
   }
 
   const totalBelanja = items.reduce(
-    (sum, it) => sum + (Number(it.qty) || 0) * (Number(it.price) || 0),
+    (sum, item) => sum + (Number(item.qty) || 0) * (Number(item.price) || 0),
     0
   )
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!description.trim()) {
-      toastError('Deskripsi / peruntukan wajib diisi')
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!location) {
+      toastError('Pilih gedung/lokasi transaksi.')
       return
     }
-    const invalidItem = items.find((i) => !i.name.trim() || Number(i.price) <= 0)
+    const invalidItem = items.find((item) =>
+      !item.name.trim() ||
+      !item.category ||
+      !Number.isFinite(Number(item.qty)) ||
+      Number(item.qty) <= 0 ||
+      item.price === '' ||
+      !Number.isFinite(Number(item.price)) ||
+      Number(item.price) < 0
+    )
     if (invalidItem) {
-      toastError('Pastikan nama barang dan harga sudah diisi dengan benar')
+      toastError('Isi nama barang, kategori, qty lebih dari 0, dan harga dengan benar.')
       return
     }
 
     setSubmitting(true)
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/purchases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date,
+          loc: location,
+          desc: '',
+          items: items.map((item) => ({
+            name: item.name.trim(),
+            cat: item.category,
+            qty: Number(item.qty),
+            unit: item.unit.trim() || 'pcs',
+            price: Number(item.price),
+          })),
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Gagal menyimpan pembelian.')
+
+      success(`Transaksi ${result.no} berhasil disimpan.`)
+      setItems([newItem()])
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Gagal menyimpan pembelian.')
+    } finally {
       setSubmitting(false)
-      success('Transaksi pembelian berhasil disimpan!')
-      router.push('/pembelian')
-    }, 600)
+    }
   }
 
   return (
     <AppShell>
-      <div className="flex flex-col w-full max-w-4xl">
-        {/* Header */}
-        <div className="flex items-center gap-2 mb-2">
-          <Link
-            href="/pembelian"
-            className="text-body-sm text-primary hover:underline flex items-center gap-1"
-          >
-            <span className="ms text-[16px]">arrow_back</span>
-            Kembali ke Daftar Pembelian
-          </Link>
-        </div>
-
-        <div className="flex flex-col min-w-0 mb-space-xl">
-          <h1 className="text-display-lg font-display-lg text-on-surface tracking-tight flex items-center gap-3">
-            <span className="ms text-primary text-[32px]">add_shopping_cart</span>
-            Tambah Transaksi Pembelian
+      <div className="mx-auto flex w-full max-w-4xl flex-col">
+        <div className="mb-5">
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-on-surface md:text-display-lg">
+            <span className="ms text-primary text-[28px] md:text-[32px]">add_shopping_cart</span>
+            Tambah Pembelian
           </h1>
-          <p className="text-body-md font-body-md text-on-surface-variant mt-1">
-            Catat pengeluaran kas operasional baru beserta rincian nota barang.
+          <p className="mt-1 text-body-sm text-on-surface-variant md:text-body-md">
+            Catat pembelian beserta rincian barang dan harga.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Header Form Card */}
-          <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-level-1 border border-[#E2E8F0] space-y-4">
-            <h2 className="text-headline-sm font-semibold text-on-surface mb-2">
-              Informasi Transaksi
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-4 pb-4">
+          <section className="space-y-4 rounded-2xl border border-[#E2E8F0] bg-surface-container-lowest p-4 shadow-level-1 sm:p-6">
+            <h2 className="text-headline-sm font-semibold text-on-surface">Informasi Transaksi</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-label-md font-semibold text-on-surface">
+                <label htmlFor="purchase-date" className="mb-1 block text-label-md font-semibold text-on-surface">
                   Tanggal Transaksi <span className="text-error">*</span>
                 </label>
                 <input
+                  id="purchase-date"
                   type="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={(event) => setDate(event.target.value)}
                   required
-                  className="mt-1 w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface border border-[#E2E8F0] focus:ring-2 focus:ring-primary-container"
+                  className="h-12 w-full rounded-xl border border-[#E2E8F0] bg-surface-container-low px-3 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary-container"
                 />
               </div>
-
               <div>
-                <label className="text-label-md font-semibold text-on-surface">
-                  Gedung / Lokasi Pemohon <span className="text-error">*</span>
+                <label htmlFor="purchase-location" className="mb-1 block text-label-md font-semibold text-on-surface">
+                  Gedung / Lokasi <span className="text-error">*</span>
                 </label>
                 <select
+                  id="purchase-location"
                   value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="mt-1 w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface border border-[#E2E8F0] focus:ring-2 focus:ring-primary-container"
+                  onChange={(event) => setLocation(event.target.value)}
+                  required
+                  disabled={locationsLoading || locations.length === 0}
+                  className="h-12 w-full rounded-xl border border-[#E2E8F0] bg-surface-container-low px-3 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary-container disabled:opacity-60"
                 >
-                  <option value="Gedung Shofiyah - TU">Gedung Shofiyah - TU</option>
-                  <option value="Gedung Umar - Matham">Gedung Umar - Matham</option>
-                  <option value="Gedung Utsman - Asrama">Gedung Utsman - Asrama</option>
-                  <option value="Copy Center & Percetakan">Copy Center &amp; Percetakan</option>
-                  <option value="Klinik Santri Sehat">Klinik Santri Sehat</option>
-                  <option value="Masjid Jami' Putra">Masjid Jami&apos; Putra</option>
+                  <option value="">{locationsLoading ? 'Memuat gedung...' : 'Pilih gedung/lokasi'}</option>
+                  {locations.map((option) => (
+                    <option key={option.code} value={option.code}>{option.name}</option>
+                  ))}
                 </select>
               </div>
             </div>
 
-            <div>
-              <label className="text-label-md font-semibold text-on-surface">
-                Peruntukan / Keterangan Pembelian <span className="text-error">*</span>
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Contoh: Pembelian ATK untuk kebutuhan ujian semester ganjil..."
-                rows={2}
-                required
-                className="mt-1 w-full p-3 rounded-xl bg-surface-container-low text-on-surface border border-[#E2E8F0] focus:ring-2 focus:ring-primary-container"
-              />
-            </div>
-          </div>
+          </section>
 
-          {/* Items Card */}
-          <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-level-1 border border-[#E2E8F0] space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-headline-sm font-semibold text-on-surface">
-                Rincian Barang / Item Belanja
-              </h2>
-              <button
-                type="button"
-                onClick={addItem}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high text-primary font-semibold text-label-md hover:bg-primary-fixed/40 transition-colors"
-              >
-                <span className="ms text-[18px]">add</span>
-                Tambah Item
-              </button>
-            </div>
+          <section className="space-y-4 rounded-2xl border border-[#E2E8F0] bg-surface-container-lowest p-4 shadow-level-1 sm:p-6">
+            <h2 className="text-headline-sm font-semibold text-on-surface">Rincian Barang</h2>
 
             <div className="space-y-3">
-              {items.map((item, idx) => (
+              {items.map((item, index) => (
                 <div
-                  key={idx}
-                  className="flex flex-col sm:flex-row items-center gap-3 p-3 rounded-xl bg-surface-container-low/60 border border-[#E2E8F0]"
+                  key={index}
+                  className="grid grid-cols-2 gap-3 rounded-xl border border-[#E2E8F0] bg-surface-container-low/60 p-3 sm:grid-cols-[minmax(0,1fr)_6rem_7rem_10rem_9rem_auto] sm:items-end"
                 >
-                  <div className="flex-1 w-full">
-                    <label className="text-label-sm font-medium text-on-surface-variant block mb-1">
-                      Nama Barang #{idx + 1}
+                  <div className="col-span-2 sm:col-span-1">
+                    <label htmlFor={`item-name-${index}`} className="mb-1 block text-label-sm font-medium text-on-surface-variant">
+                      Nama Barang #{index + 1}
                     </label>
                     <input
+                      id={`item-name-${index}`}
                       type="text"
                       placeholder="Nama barang..."
                       value={item.name}
-                      onChange={(e) => updateItem(idx, 'name', e.target.value)}
+                      onChange={(event) => updateItem(index, 'name', event.target.value)}
                       required
-                      className="w-full h-9 px-3 rounded-lg bg-surface-container-lowest text-on-surface border border-[#E2E8F0] text-body-sm"
+                      className="h-12 w-full rounded-lg border border-[#E2E8F0] bg-surface-container-lowest px-3 text-body-sm text-on-surface"
                     />
                   </div>
-
-                  <div className="w-full sm:w-24">
-                    <label className="text-label-sm font-medium text-on-surface-variant block mb-1">
+                  <div>
+                    <label htmlFor={`item-qty-${index}`} className="mb-1 block text-label-sm font-medium text-on-surface-variant">
                       Qty
                     </label>
                     <input
+                      id={`item-qty-${index}`}
                       type="number"
-                      min="1"
+                      min="0.01"
+                      step="any"
+                      inputMode="decimal"
                       value={item.qty}
-                      onChange={(e) => updateItem(idx, 'qty', e.target.value)}
+                      onChange={(event) => updateItem(index, 'qty', event.target.value)}
                       required
-                      className="w-full h-9 px-2 text-center rounded-lg bg-surface-container-lowest text-on-surface border border-[#E2E8F0] text-body-sm"
+                      className="h-12 w-full rounded-lg border border-[#E2E8F0] bg-surface-container-lowest px-2 text-center text-body-sm text-on-surface"
                     />
                   </div>
-
-                  <div className="w-full sm:w-28">
-                    <label className="text-label-sm font-medium text-on-surface-variant block mb-1">
+                  <div>
+                    <label htmlFor={`item-unit-${index}`} className="mb-1 block text-label-sm font-medium text-on-surface-variant">
                       Satuan
                     </label>
                     <input
+                      id={`item-unit-${index}`}
                       type="text"
-                      placeholder="pcs/rim"
+                      placeholder="pcs"
                       value={item.unit}
-                      onChange={(e) => updateItem(idx, 'unit', e.target.value)}
-                      className="w-full h-9 px-2 text-center rounded-lg bg-surface-container-lowest text-on-surface border border-[#E2E8F0] text-body-sm"
+                      onChange={(event) => updateItem(index, 'unit', event.target.value)}
+                      className="h-12 w-full rounded-lg border border-[#E2E8F0] bg-surface-container-lowest px-2 text-center text-body-sm text-on-surface"
                     />
                   </div>
-
-                  <div className="w-full sm:w-36">
-                    <label className="text-label-sm font-medium text-on-surface-variant block mb-1">
+                  <div className="col-span-2 sm:col-span-1">
+                    <label htmlFor={`item-category-${index}`} className="mb-1 block text-label-sm font-medium text-on-surface-variant">
+                      Kategori
+                    </label>
+                    <select
+                      id={`item-category-${index}`}
+                      value={item.category}
+                      onChange={(event) => updateItem(index, 'category', event.target.value)}
+                      required
+                      disabled={categoriesLoading || categories.length === 0}
+                      className="h-12 w-full rounded-lg border border-[#E2E8F0] bg-surface-container-lowest px-3 text-body-sm text-on-surface disabled:opacity-60"
+                    >
+                      <option value="">
+                        {categoriesLoading ? 'Memuat kategori...' : 'Pilih kategori'}
+                      </option>
+                      {categories.map((category) => (
+                        <option key={category.name} value={category.name}>{category.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <label htmlFor={`item-price-${index}`} className="mb-1 block text-label-sm font-medium text-on-surface-variant">
                       Harga Satuan (Rp)
                     </label>
                     <input
+                      id={`item-price-${index}`}
                       type="number"
                       min="0"
-                      step="500"
+                      step="any"
+                      inputMode="decimal"
                       placeholder="0"
                       value={item.price}
-                      onChange={(e) => updateItem(idx, 'price', e.target.value)}
+                      onChange={(event) => updateItem(index, 'price', event.target.value)}
                       required
-                      className="w-full h-9 px-3 text-right rounded-lg bg-surface-container-lowest text-on-surface border border-[#E2E8F0] text-body-sm font-mono"
+                      className="h-12 w-full rounded-lg border border-[#E2E8F0] bg-surface-container-lowest px-3 text-right font-mono text-body-sm text-on-surface"
                     />
                   </div>
-
-                  <div className="sm:pt-5">
-                    <button
-                      type="button"
-                      onClick={() => removeItem(idx)}
-                      disabled={items.length === 1}
-                      className="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-error-container hover:text-error disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <span className="ms text-[18px]">delete</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(index)}
+                    disabled={items.length === 1}
+                    aria-label={`Hapus barang ${index + 1}`}
+                    className="col-span-2 flex min-h-11 items-center justify-center gap-2 rounded-lg text-label-sm font-medium text-error hover:bg-error-container disabled:opacity-40 sm:col-span-1 sm:w-11"
+                  >
+                    <span className="ms text-[18px]">delete</span>
+                    <span className="sm:hidden">Hapus item</span>
+                  </button>
                 </div>
               ))}
             </div>
 
-            {/* Total Summary */}
-            <div className="flex items-center justify-between pt-4 border-t border-[#E2E8F0]">
-              <span className="text-headline-sm font-semibold text-on-surface">
-                Total Estimasi Belanja:
-              </span>
-              <span className="font-table-cell-mono text-display-md text-primary font-bold">
+            <button
+              type="button"
+              onClick={addItem}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-surface-container-high px-4 py-2 text-label-md font-semibold text-primary hover:bg-primary-fixed/40 sm:w-auto"
+            >
+              <span className="ms text-[18px]">add</span>
+              Tambah Item
+            </button>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#E2E8F0] pt-4">
+              <span className="text-body-md font-semibold text-on-surface">Total Estimasi</span>
+              <span className="font-mono text-xl font-bold text-primary sm:text-2xl">
                 Rp{totalBelanja.toLocaleString('id-ID')}
               </span>
             </div>
-          </div>
+          </section>
 
-          {/* Form Actions */}
-          <div className="flex items-center justify-end gap-3">
-            <Link
-              href="/pembelian"
-              className="px-5 py-2.5 rounded-xl border border-[#E2E8F0] text-on-surface font-semibold hover:bg-surface-container-low transition-colors"
-            >
-              Batal
-            </Link>
+          <div className="sticky bottom-0 -mx-4 flex justify-end border-t border-[#E2E8F0] bg-surface/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
             <button
               type="submit"
-              disabled={submitting}
-              className="px-6 py-2.5 rounded-xl bg-primary-container text-on-primary font-semibold shadow-level-2 hover:bg-[#E66700] transition-all flex items-center gap-2"
+              disabled={submitting || locationsLoading || locations.length === 0 || categoriesLoading || categories.length === 0}
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary-container px-6 py-3 font-semibold text-on-primary shadow-level-2 transition-all hover:bg-[#E66700] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
-              {submitting && (
-                <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-              )}
-              Simpan Pembelian
+              {submitting && <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />}
+              {submitting ? 'Menyimpan...' : 'Simpan Pembelian'}
             </button>
           </div>
         </form>

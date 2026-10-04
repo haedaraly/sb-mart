@@ -7,7 +7,7 @@ export async function PUT(r: Request, { params }: { params: { id: string } }) {
   if (u?.role !== 'Super Admin') return j({ error: 'Tidak punya akses' }, 403);
   const b = await r.json(),
     id = +params.id;
-  if (!b.name?.trim() || !['Super Admin', 'Admin', 'Operator', 'Viewer'].includes(b.role)) {
+  if (!b.name?.trim() || !['Super Admin', 'Admin', 'Operator'].includes(b.role)) {
     return j({ error: 'Data tidak valid' }, 400);
   }
   if (u!.id == id && (!b.on || b.role !== 'Super Admin')) {

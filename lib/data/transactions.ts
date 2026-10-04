@@ -3,12 +3,15 @@ export type TransactionStatus = 'selesai' | 'menunggu' | 'ditolak' | 'draft'
 export interface ItemRincian {
   nama: string
   nilai: string
+  kategori?: string
 }
 
 export interface Transaction {
   id: string
   noTransaksi: string
   tanggal: string
+  tanggalISO?: string
+  description?: string
   jam: string
   lokasi: string
   lokasiColor: string

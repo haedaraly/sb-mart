@@ -1,6 +1,6 @@
 import {PrismaClient} from '@prisma/client';import bcrypt from 'bcryptjs';
 const p=new PrismaClient();
-await p.user.createMany({data:[['super','Super Admin'],['admin','Admin'],['operator','Operator'],['viewer','Viewer']].map(([u,r])=>({username:u,name:r,role:r,passwordHash:bcrypt.hashSync(u+'123',10)}))});
+await p.user.createMany({data:[['super','Super Admin'],['admin','Admin'],['operator','Operator']].map(([u,r])=>({username:u,name:r,role:r,passwordHash:bcrypt.hashSync(u+'123',10)}))});
 const L=[['SHF','Gedung Shofiyah - TU','Administrasi/TU'],['UMR','Gedung Umar - Matham','Matham'],['CPY','Copy Center','Percetakan/copy'],['ABK','Gedung Abu Bakar',''],['KHD','Gedung Khadijah',''],['FTH','Gedung Fatimah',''],['LOB','Lobby',''],['SRP-SD','Ruang Sarpras SD','Sarpras SD'],['SRP-TK','Ruang Sarpras TK','Sarpras TK']];
 await p.location.createMany({data:L.map(([code,name,description])=>({code,name,description}))});
 await p.category.createMany({data:['ATK','Kebersihan','Konsumsi','Maintenance','Listrik','Air','Percetakan','Perlengkapan','Lainnya'].map(name=>({name}))});

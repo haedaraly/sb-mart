@@ -1,17 +1,5 @@
 const infoItems = [
   {
-    icon: 'verified_user',
-    color: 'text-primary',
-    title: 'Validitas Bukti Pengeluaran',
-    body: 'Seluruh nota transaksi di atas Rp500.000 wajib dilampiri cap basah vendor & paraf Kepala Unit bersangkutan.',
-  },
-  {
-    icon: 'account_balance_wallet',
-    color: 'text-secondary',
-    title: 'Sinkronisasi Kas Harian',
-    body: 'Tutup buku kas kecil dilakukan setiap hari kerja pukul 17:00 WIB oleh tim Bendahara Yayasan.',
-  },
-  {
     icon: 'help_center',
     color: 'text-tertiary',
     title: 'Pusat Bantuan Administrasi',
@@ -21,7 +9,7 @@ const infoItems = [
 
 export default function InfoCards() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+    <div className="grid grid-cols-1 gap-space-md">
       {infoItems.map((item) => (
         <div
           key={item.title}

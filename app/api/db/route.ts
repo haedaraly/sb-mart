@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const u = getUser();
   if (!u) return j({ error: 'Belum login' }, 401);
+  if (u.role === 'Operator') return j({ error: 'Tidak punya akses' }, 403);
   const o = { orderBy: { id: 'asc' as const } },
     on = (x: any) => (x.isActive ? 1 : 0);
   const [l, c, n, pr, pu, us] = await Promise.all([
@@ -51,13 +52,13 @@ export async function GET() {
         price: Number(i.unitPrice),
       })),
     })),
-    users: (us as any[]).map(x => ({
+    users: u.role === 'Super Admin' ? (us as any[]).map(x => ({
       id: x.id,
       username: u.role === 'Super Admin' ? x.username : undefined,
       name: x.name,
       email: x.email || '',
       role: x.role,
       on: on(x),
-    })),
+    })) : [],
   });
 }

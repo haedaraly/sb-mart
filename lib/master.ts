@@ -18,8 +18,14 @@ export async function saveMaster(k: string, b: any, id?: string) {
     d = { code: b.code, name: n, description: b.description || '', isActive };
   } else if (k == 'products') {
     const c = await prisma.category.findUnique({ where: { name: b.category } });
-    const u = await prisma.unit.findUnique({ where: { name: b.unit } });
-    if (!c || !u) throw new Error('Kategori/satuan tidak ditemukan');
+    if (!c) throw new Error('Kategori tidak ditemukan');
+    const unitName = (b.unit || '').trim();
+    if (!unitName) throw new Error('Satuan wajib diisi');
+    const u = await prisma.unit.upsert({
+      where: { name: unitName },
+      update: {},
+      create: { name: unitName },
+    });
     const defaultPrice =
       b.price !== undefined && b.price !== ''
         ? new Prisma.Decimal(String(b.price))

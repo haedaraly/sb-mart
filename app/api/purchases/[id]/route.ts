@@ -4,7 +4,7 @@ import { validate, items } from '@/lib/purchase';
 
 export async function PUT(r: Request, { params }: { params: { id: string } }) {
   const u = getUser();
-  if (!u || (!allow(u, 'input') && !allow(u, 'edit'))) return j({ error: 'Tidak punya akses' }, 403);
+  if (!u || !allow(u, 'edit')) return j({ error: 'Tidak punya akses' }, 403);
   const b = await r.json(),
     e = validate(b);
   if (e) return j({ error: e }, 400);
@@ -15,11 +15,6 @@ export async function PUT(r: Request, { params }: { params: { id: string } }) {
     await prisma.$transaction(async (tx: any) => {
       const existing = await tx.purchase.findUnique({ where: { id } });
       if (!existing) throw new Error('Transaksi tidak ditemukan');
-
-      // Hak akses granular: Operator hanya dapat mengedit transaksi yang dibuat oleh akunnya sendiri
-      if (u.role === 'Operator' && existing.createdBy !== u.id) {
-        throw new Error('Operator hanya dapat mengubah transaksi yang dibuat sendiri');
-      }
 
       const l = await tx.location.findUnique({ where: { code: b.loc } });
       if (!l) throw new Error('Gedung tidak valid');

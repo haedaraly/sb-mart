@@ -7,14 +7,16 @@ export const dynamic = 'force-dynamic';
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
 export async function GET(r: Request) {
-  if (!getUser()) return j({ error: 'Belum login' }, 401);
+  const user = getUser();
+  if (!user) return j({ error: 'Belum login' }, 401);
+  if (!['Super Admin', 'Admin'].includes(user.role)) return j({ error: 'Tidak punya akses' }, 403);
   const s = new URL(r.url).searchParams;
   const year = s.get('y') || String(new Date().getFullYear()),
     g = s.get('g'),
     c = s.get('c');
 
-  const startDate = new Date(`${year}-01-01T00:00:00Z`);
-  const endDate = new Date(`${year}-12-31T23:59:59Z`);
+  const startDate = new Date(Date.UTC(Number(year), 0, 1));
+  const endDate = new Date(Date.UTC(Number(year) + 1, 0, 1));
 
   const [locations, ps] = await Promise.all([
     prisma.location.findMany({ orderBy: { code: 'asc' } }),
@@ -55,7 +57,7 @@ export async function GET(r: Request) {
     if (!matrix[locCode]) {
       matrix[locCode] = { monthly: Array(12).fill(0), total: 0 };
     }
-    const mIdx = p.date.getMonth(); // 0 to 11
+    const mIdx = p.date.getUTCMonth();
 
     for (const item of p.items) {
       if (c && item.categoryName !== c) continue;

@@ -5,7 +5,7 @@ import Modal from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/utils'
 
-const ROLES = ['Super Admin', 'Admin', 'Operator', 'Viewer'] as const
+const ROLES = ['Super Admin', 'Admin', 'Operator'] as const
 type Role = (typeof ROLES)[number]
 
 interface UserItem {
@@ -21,7 +21,7 @@ interface UserFormModalProps {
   open: boolean
   onClose: () => void
   onSuccess: () => void
-  initialData?: UserItem | null
+  initialData?: (Omit<UserItem, 'role'> & { role: string }) | null
 }
 
 interface FieldProps {
@@ -60,7 +60,6 @@ const ROLE_BADGE: Record<Role, string> = {
   'Super Admin': 'bg-error-container text-error',
   Admin: 'bg-primary-fixed/40 text-primary',
   Operator: 'bg-secondary-fixed/50 text-secondary',
-  Viewer: 'bg-surface-container-high text-on-surface-variant',
 }
 
 export default function UserFormModal({
@@ -90,7 +89,7 @@ export default function UserFormModal({
         username: initialData.username ?? '',
         name: initialData.name ?? '',
         email: initialData.email ?? '',
-        role: initialData.role ?? '',
+        role: ROLES.includes(initialData.role as Role) ? initialData.role as Role : '',
         isActive: initialData.isActive ?? true,
       })
       setPassword('')
@@ -238,8 +237,7 @@ export default function UserFormModal({
               <span className="text-body-sm font-body-sm text-on-surface-variant">
                 {form.role === 'Super Admin' && '— Akses penuh ke semua fitur'}
                 {form.role === 'Admin' && '— Kelola transaksi & master data'}
-                {form.role === 'Operator' && '— Input & edit transaksi saja'}
-                {form.role === 'Viewer' && '— Hanya bisa melihat data'}
+                {form.role === 'Operator' && '— Hanya input pembelian'}
               </span>
             </div>
           )}

@@ -25,9 +25,8 @@ interface MasterFormModalProps {
   onSuccess: () => void
   masterKey: MasterKey
   initialData?: MasterItem | null
-  /** Daftar untuk select (kategori, satuan pada produk) */
+  /** Daftar kategori untuk pilihan pada produk */
   categories?: string[]
-  units?: string[]
 }
 
 const MASTER_LABELS: Record<MasterKey, { title: string; namePlaceholder: string }> = {
@@ -76,7 +75,6 @@ export default function MasterFormModal({
   masterKey,
   initialData,
   categories = [],
-  units = [],
 }: MasterFormModalProps) {
   const { success, error: toastError } = useToast()
   const isEdit = !!initialData?.id
@@ -124,7 +122,7 @@ export default function MasterFormModal({
     if (!form.name?.trim()) errs.name = 'Nama wajib diisi'
     if (masterKey === 'products') {
       if (!form.category) errs.category = 'Kategori wajib dipilih'
-      if (!form.unit) errs.unit = 'Satuan wajib dipilih'
+      if (!form.unit?.trim()) errs.unit = 'Satuan wajib diisi'
     }
     if (masterKey === 'units' && !form.symbol?.trim()) errs.symbol = 'Simbol wajib diisi'
     setErrors(errs)
@@ -158,7 +156,7 @@ export default function MasterFormModal({
       if (masterKey === 'products') {
         body.code = form.code?.trim() || ''
         body.category = form.category
-        body.unit = form.unit
+        body.unit = form.unit?.trim()
         body.price = form.price !== '' ? Number(form.price) : undefined
       }
 
@@ -276,19 +274,16 @@ export default function MasterFormModal({
                 </div>
               </Field>
               <Field label="Satuan" id="master-unit" required error={errors.unit}>
-                <div className="relative">
-                  <select
-                    id="master-unit"
-                    value={form.unit}
-                    onChange={(e) => set('unit', e.target.value)}
-                    aria-invalid={!!errors.unit}
-                    className={cn(selectClass, errors.unit && 'ring-2 ring-error')}
-                  >
-                    <option value="">Pilih satuan</option>
-                    {units.map((u) => <option key={u} value={u}>{u}</option>)}
-                  </select>
-                  <span className="ms text-[16px] text-on-surface-variant absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">expand_more</span>
-                </div>
+                <input
+                  id="master-unit"
+                  type="text"
+                  autoComplete="off"
+                  placeholder="Contoh: pcs, rim, dus"
+                  value={form.unit}
+                  onChange={(e) => set('unit', e.target.value)}
+                  aria-invalid={!!errors.unit}
+                  className={cn(inputClass, errors.unit && 'ring-2 ring-error')}
+                />
               </Field>
             </div>
             <Field label="Harga Default (Rp)" id="master-price">

@@ -1,14 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import StatusChip from '@/components/ui/StatusChip'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { type Transaction, formatRupiah } from '@/lib/data/transactions'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/Toast'
 
 interface TransactionTableProps {
   transactions: Transaction[]
-  searchQuery?: string
+  loading?: boolean
+  onDeleted?: () => void
 }
 
 function ItemTooltip({ items }: { items: Transaction['items'] }) {
@@ -40,46 +41,9 @@ function ItemTooltip({ items }: { items: Transaction['items'] }) {
   )
 }
 
-function RowActions({
-  onView,
-  onPrint,
-  onEdit,
-  onDeleteRequest,
-}: {
-  onView?: () => void
-  onPrint?: () => void
-  onEdit?: () => void
-  onDeleteRequest: () => void
-}) {
+function RowActions({ onDeleteRequest }: { onDeleteRequest: () => void }) {
   return (
     <div className="flex items-center justify-center gap-1">
-      <button
-        className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
-        title="Lihat Rincian"
-        aria-label="Lihat rincian transaksi"
-        type="button"
-        onClick={onView}
-      >
-        <span className="ms text-[18px]" aria-hidden="true">visibility</span>
-      </button>
-      <button
-        className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
-        title="Cetak Bukti Transaksi"
-        aria-label="Cetak bukti transaksi"
-        type="button"
-        onClick={onPrint}
-      >
-        <span className="ms text-[18px]" aria-hidden="true">print</span>
-      </button>
-      <button
-        className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
-        title="Ubah Data"
-        aria-label="Ubah data transaksi"
-        type="button"
-        onClick={onEdit}
-      >
-        <span className="ms text-[18px]" aria-hidden="true">edit</span>
-      </button>
       <button
         className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-error-container hover:text-error transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-error"
         title="Batalkan/Hapus Transaksi"
@@ -101,27 +65,20 @@ const THEAD_COLS = [
   { label: 'Item Pembelian', className: 'py-3.5 px-4' },
   { label: 'Total Nominal', className: 'py-3.5 px-4 text-right' },
   { label: 'Operator', className: 'py-3.5 px-4' },
-  { label: 'Status', className: 'py-3.5 px-4 text-center' },
-  { label: 'Aksi', className: 'py-3.5 px-4 text-center w-36' },
+  { label: 'Aksi', className: 'py-3.5 px-4 text-center w-16' },
 ]
 
 export default function TransactionTable({
   transactions,
-  searchQuery = '',
+  loading = false,
+  onDeleted,
 }: TransactionTableProps) {
-  const [rows, setRows] = useState(transactions)
+  const { error: toastError } = useToast()
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; noTransaksi: string } | null>(null)
 
-  const filtered = searchQuery
-    ? rows.filter(
-        (t) =>
-          t.noTransaksi.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          t.lokasi.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          t.operatorNama.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-    : rows
+  const filtered = transactions
 
   function copyTransaksi(id: string, noTransaksi: string) {
     navigator.clipboard.writeText(noTransaksi)
@@ -129,9 +86,16 @@ export default function TransactionTable({
     setTimeout(() => setCopiedId(null), 1200)
   }
 
-  function deleteRow(id: string) {
-    setRows((r) => r.filter((t) => t.id !== id))
-    setConfirmDelete(null)
+  async function deleteRow(id: string) {
+    try {
+      const response = await fetch(`/api/purchases/${id}`, { method: 'DELETE' })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Gagal menghapus transaksi.')
+      setConfirmDelete(null)
+      onDeleted?.()
+    } catch (error) {
+      toastError(error instanceof Error ? error.message : 'Gagal menghapus transaksi.')
+    }
   }
 
   const totalHalaman = filtered.reduce((sum, t) => sum + t.totalNominal, 0)
@@ -150,7 +114,11 @@ export default function TransactionTable({
             </tr>
           </thead>
           <tbody className="text-table-cell font-table-cell text-on-surface divide-y divide-[#E2E8F0]/50">
-            {filtered.map((t, idx) => (
+            {loading ? (
+              <tr><td colSpan={7} className="px-4 py-10 text-center text-body-sm text-on-surface-variant">Memuat transaksi...</td></tr>
+            ) : filtered.length === 0 ? (
+              <tr><td colSpan={7} className="px-4 py-10 text-center text-body-sm text-on-surface-variant">Tidak ada transaksi yang sesuai filter.</td></tr>
+            ) : filtered.map((t, idx) => (
               <tr
                 key={t.id}
                 className={cn(
@@ -240,11 +208,6 @@ export default function TransactionTable({
                   </div>
                 </td>
 
-                {/* Status */}
-                <td className="py-3.5 px-4 text-center">
-                  <StatusChip status={t.status} />
-                </td>
-
                 {/* Aksi */}
                 <td className="py-3.5 px-4">
                   <RowActions
@@ -262,9 +225,7 @@ export default function TransactionTable({
         <div className="flex items-center gap-2">
           <span className="ms text-primary text-[20px]">calculate</span>
           <span className="text-body-md font-body-md text-on-surface">
-            Menampilkan{' '}
-            <span className="font-semibold text-on-surface">1 - {filtered.length}</span> dari{' '}
-            <span className="font-semibold text-on-surface">126</span> transaksi
+            Menampilkan <span className="font-semibold text-on-surface">{filtered.length}</span> transaksi
           </span>
         </div>
         <div className="flex items-center gap-4">
@@ -279,82 +240,11 @@ export default function TransactionTable({
         </div>
       </div>
 
-      {/* Pagination */}
-      <div className="px-space-lg py-space-md bg-surface-container-lowest border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-space-md">
-        {/* Per page selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-label-md font-label-md text-on-surface-variant">
-            Tampilkan:
-          </span>
-          <div className="inline-flex rounded-xl bg-surface-container p-0.5">
-            {[10, 25, 50].map((n, i) => (
-              <button
-                key={n}
-                className={cn(
-                  'px-2.5 py-1 rounded-lg text-label-md font-label-md transition-colors',
-                  i === 0
-                    ? 'bg-surface-container-lowest text-primary font-semibold shadow-sm'
-                    : 'text-on-surface-variant hover:text-on-surface',
-                )}
-                type="button"
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-          <span className="text-body-sm font-body-sm text-on-surface-variant">
-            per halaman
-          </span>
-        </div>
-
-        {/* Page buttons */}
-        <div className="inline-flex items-center gap-1">
-          <button
-            disabled
-            className="h-9 px-3 rounded-xl bg-surface-container-low text-on-surface-variant/40 text-body-sm font-body-sm flex items-center gap-1 cursor-not-allowed"
-            type="button"
-          >
-            <span className="ms text-[16px]">chevron_left</span>
-            <span>Sebelumnya</span>
-          </button>
-          {[1, 2, 3].map((p) => (
-            <button
-              key={p}
-              className={cn(
-                'w-9 h-9 rounded-xl flex items-center justify-center transition-colors',
-                p === 1
-                  ? 'bg-primary-container text-on-primary text-headline-sm font-headline-sm shadow-sm'
-                  : 'text-on-surface hover:bg-surface-container text-body-md font-body-md',
-              )}
-              type="button"
-            >
-              {p}
-            </button>
-          ))}
-          <span className="w-7 text-center text-on-surface-variant text-body-md font-body-md">
-            ...
-          </span>
-          <button
-            className="w-9 h-9 rounded-xl text-on-surface hover:bg-surface-container text-body-md font-body-md flex items-center justify-center transition-colors"
-            type="button"
-          >
-            13
-          </button>
-          <button
-            className="h-9 px-3 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface text-body-sm font-body-sm flex items-center gap-1 transition-colors"
-            type="button"
-          >
-            <span>Selanjutnya</span>
-            <span className="ms text-[16px]">chevron_right</span>
-          </button>
-        </div>
-      </div>
-
       {/* Confirm delete dialog */}
       <ConfirmDialog
         open={!!confirmDelete}
         onClose={() => setConfirmDelete(null)}
-        onConfirm={() => confirmDelete && deleteRow(confirmDelete.id)}
+        onConfirm={() => confirmDelete && void deleteRow(confirmDelete.id)}
         title="Hapus Transaksi?"
         message={`Transaksi ${confirmDelete?.noTransaksi ?? ''} akan dihapus secara permanen. Tindakan ini memerlukan otorisasi bendahara dan tidak dapat dibatalkan.`}
         confirmLabel="Ya, Hapus"

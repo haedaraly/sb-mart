@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 
 export type U = { id: number; name: string; role: string };
 
+const ROLES = ['Super Admin', 'Admin', 'Operator'];
+
 const sign = (s: string) =>
   crypto.createHmac('sha256', process.env.AUTH_SECRET || 'dev-secret').update(s).digest('base64url');
 
@@ -12,26 +14,27 @@ export const makeToken = (u: U) => {
   return p + '.' + sign(p);
 };
 
-export function getUser(): U | null {
-  const t = cookies().get('session')?.value;
-  if (!t) {
-    if (process.env.NODE_ENV === 'development') {
-      return { id: 1, name: 'Super Admin', role: 'Super Admin' };
-    }
-    return null;
-  }
-  const [p, s] = t.split('.');
+export function readSessionToken(token?: string | null): U | null {
+  if (!token) return null;
+
+  const [p, s] = token.split('.');
   if (!p || s !== sign(p)) return null;
+
   try {
-    return JSON.parse(Buffer.from(p, 'base64url').toString());
+    const payload = JSON.parse(Buffer.from(p, 'base64url').toString()) as U;
+    return ROLES.includes(payload.role) ? payload : null;
   } catch {
     return null;
   }
 }
 
+export function getUser(): U | null {
+  return readSessionToken(cookies().get('session')?.value);
+}
+
 const R: Record<string, string[]> = {
-  input: ['Super Admin', 'Admin', 'Operator'],
-  edit: ['Super Admin', 'Admin', 'Operator'],
+  input: ['Operator'],
+  edit: ['Super Admin', 'Admin'],
   del: ['Super Admin', 'Admin'],
   master: ['Super Admin', 'Admin'],
   users: ['Super Admin'],

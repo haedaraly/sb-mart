@@ -37,14 +37,12 @@ const navItems: NavItem[] = [
       { label: 'Lokasi / Gedung', href: '/master/lokasi' },
       { label: 'Barang', href: '/master/barang' },
       { label: 'Kategori', href: '/master/kategori' },
-      { label: 'Satuan', href: '/master/satuan' },
     ],
   },
 ]
 
-const adminItems: NavItem[] = [
+const superAdminItems: NavItem[] = [
   { label: 'Pengguna', icon: 'manage_accounts', href: '/pengguna' },
-  { label: 'Pengaturan', icon: 'settings', href: '/pengaturan' },
 ]
 
 function NavGroup({
@@ -143,6 +141,35 @@ interface SidebarProps {
 
 export default function Sidebar({ open = false, onClose }: SidebarProps) {
   const pathname = usePathname()
+  const [role, setRole] = useState<string | null | undefined>(undefined)
+
+  useEffect(() => {
+    let active = true
+    fetch('/api/me', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Gagal memuat profil pengguna')
+        return response.json()
+      })
+      .then((user: { role: string }) => {
+        if (active) setRole(user.role)
+      })
+      .catch((error) => {
+        console.error('Gagal memuat role navigasi:', error)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const isOperator = role === 'Operator'
+  const visibleNavItems = role === undefined
+    ? []
+    : isOperator
+      ? [{ label: 'Tambah Pembelian', icon: 'add_shopping_cart', href: '/pembelian/tambah' }]
+      : role === 'Super Admin' || role === 'Admin'
+        ? navItems.filter((item) => item.label !== 'Pembelian')
+        : []
+  const visibleAdminItems = role === 'Super Admin' ? superAdminItems : []
 
   return (
     <aside
@@ -191,13 +218,15 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
         className="flex-1 px-space-md py-space-sm overflow-y-auto flex flex-col gap-space-xs"
         aria-label="Menu navigasi"
       >
-        <div className="px-space-sm pt-space-xs pb-space-xs">
-          <span className="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">
-            Menu Utama
-          </span>
-        </div>
+        {(role === 'Super Admin' || role === 'Admin') && (
+          <div className="px-space-sm pt-space-xs pb-space-xs">
+            <span className="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">
+              Menu Utama
+            </span>
+          </div>
+        )}
 
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <NavGroup
             key={item.label}
             item={item}
@@ -206,13 +235,15 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
           />
         ))}
 
-        <div className="px-space-sm pt-space-md pb-space-xs">
-          <span className="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">
-            Administrasi
-          </span>
-        </div>
+        {visibleAdminItems.length > 0 && (
+          <div className="px-space-sm pt-space-md pb-space-xs">
+            <span className="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">
+              Administrasi
+            </span>
+          </div>
+        )}
 
-        {adminItems.map((item) => (
+        {visibleAdminItems.map((item) => (
           <NavGroup
             key={item.label}
             item={item}
@@ -222,25 +253,6 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Foundation footer */}
-      <div className="p-space-md border-t border-[#E2E8F0]">
-        <div className="p-space-md rounded-xl bg-surface-container-low shadow-level-1 flex items-center gap-space-sm">
-          <div
-            className="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-primary flex-shrink-0"
-            aria-hidden="true"
-          >
-            <span className="ms text-[20px]">verified</span>
-          </div>
-          <div className="min-w-0">
-            <div className="text-label-md font-label-md text-on-surface font-semibold truncate">
-              Yayasan Pendidikan
-            </div>
-            <div className="text-label-sm font-label-sm text-on-surface-variant truncate">
-              LPI Amanah Governance
-            </div>
-          </div>
-        </div>
-      </div>
     </aside>
   )
 }

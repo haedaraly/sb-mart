@@ -13,7 +13,7 @@ interface UserItem {
   username: string
   name: string
   email?: string
-  role: 'Super Admin' | 'Admin' | 'Operator' | 'Viewer'
+  role: string
   isActive: boolean
   createdAt?: string
 }
@@ -33,11 +33,6 @@ const ROLE_STYLES: Record<string, { bg: string; text: string; icon: string }> = 
     bg: 'bg-secondary-fixed/50',
     text: 'text-secondary',
     icon: 'person',
-  },
-  Viewer: {
-    bg: 'bg-surface-container-high',
-    text: 'text-on-surface-variant',
-    icon: 'visibility',
   },
 }
 
@@ -167,7 +162,7 @@ export default function PenggunaPage() {
               Manajemen Pengguna
             </h1>
             <p className="text-body-md font-body-md text-on-surface-variant mt-1 max-w-3xl">
-              Kelola akun staf, petugas operasional, dan tingkat hak akses (Super Admin, Admin, Operator, Viewer).
+              Kelola akun staf, petugas operasional, dan tingkat hak akses (Super Admin, Admin, Operator).
             </p>
           </div>
 
@@ -215,7 +210,6 @@ export default function PenggunaPage() {
                 <option value="Super Admin">Super Admin</option>
                 <option value="Admin">Admin</option>
                 <option value="Operator">Operator</option>
-                <option value="Viewer">Viewer</option>
               </select>
             </div>
 
@@ -301,7 +295,7 @@ export default function PenggunaPage() {
                   </tr>
                 ) : (
                   filteredUsers.map((u, idx) => {
-                    const rStyle = ROLE_STYLES[u.role] || ROLE_STYLES.Viewer
+                    const rStyle = ROLE_STYLES[u.role] || ROLE_STYLES.Operator
                     const initials = u.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
                     return (
                       <tr

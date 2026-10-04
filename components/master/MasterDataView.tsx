@@ -48,9 +48,8 @@ export default function MasterDataView<T extends { id: number; name: string; isA
   const [formOpen, setFormOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any | null>(null)
 
-  // Extra relations for products (categories & units)
+  // Extra relation for products
   const [categories, setCategories] = useState<string[]>([])
-  const [units, setUnits] = useState<string[]>([])
 
   // Confirm dialog states
   const [confirmToggle, setConfirmToggle] = useState<{
@@ -69,19 +68,12 @@ export default function MasterDataView<T extends { id: number; name: string; isA
       const json = await res.json()
       setData(json)
 
-      // If product, also fetch categories and units for modal selects
+      // If product, also fetch categories for the modal
       if (masterKey === 'products') {
-        const [catRes, unitRes] = await Promise.all([
-          fetch('/api/master/categories'),
-          fetch('/api/master/units'),
-        ])
+        const catRes = await fetch('/api/master/categories')
         if (catRes.ok) {
           const cats = await catRes.json()
           setCategories(cats.map((c: any) => c.name))
-        }
-        if (unitRes.ok) {
-          const uns = await unitRes.json()
-          setUnits(uns.map((u: any) => u.name))
         }
       }
     } catch (err: any) {
@@ -399,7 +391,6 @@ export default function MasterDataView<T extends { id: number; name: string; isA
         masterKey={masterKey}
         initialData={editingItem}
         categories={categories}
-        units={units}
       />
 
       {/* ── Confirm Status Toggle Dialog ────────────── */}

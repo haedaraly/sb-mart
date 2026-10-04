@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';import {prisma} from '@/lib/db';import {getUser,j} from '@/lib/auth';
 export const dynamic='force-dynamic';
-export async function GET(r:Request){if(!getUser())return j({error:'Belum login'},401);const s=new URL(r.url).searchParams,a=s.get('a'),b=s.get('b'),g=s.get('g'),c=s.get('c');
+export async function GET(r:Request){const u=getUser();if(!u)return j({error:'Belum login'},401);if(!['Super Admin','Admin'].includes(u.role))return j({error:'Tidak punya akses'},403);const s=new URL(r.url).searchParams,a=s.get('a'),b=s.get('b'),g=s.get('g'),c=s.get('c');
  const ps=await prisma.purchase.findMany({where:{...(a||b?{date:{...(a?{gte:new Date(a)}:{}),...(b?{lte:new Date(b)}:{})}}:{}),...(g?{location:{code:g}}:{})},include:{items:true,location:true,creator:true},orderBy:[{date:'asc'},{id:'asc'}]});
  const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('Pembelian'),rk=wb.addWorksheet('Rekap Gedung'),rp='"Rp"#,##0';
  ws.columns=[['no','No. Transaksi',20],['d','Tanggal',16],['g','Gedung',26],['o','Operator',14],['n','Barang',26],['c','Kategori',14],['q','Qty',8],['u','Satuan',10],['p','Harga',14],['t','Total',16]].map(([key,header,width]:any)=>({key,header,width}));

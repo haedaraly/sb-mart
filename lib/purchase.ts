@@ -5,6 +5,7 @@ export function validate(b: any) {
   if (!Array.isArray(b.items) || !b.items.length) return 'Minimal satu item';
   for (const i of b.items) {
     if (!String(i.name || '').trim()) return 'Nama barang wajib diisi';
+    if (!String(i.cat || '').trim()) return 'Kategori wajib dipilih';
     if (!(Number(i.qty) > 0)) return 'Qty harus lebih dari 0';
     if (!(Number(i.price) >= 0)) return 'Harga tidak boleh negatif';
   }

@@ -5,6 +5,10 @@ import { saveMaster } from '@/lib/master';
 export const dynamic = 'force-dynamic';
 
 export async function GET(r: Request, { params }: { params: { k: string } }) {
+  const user = getUser();
+  if (!user) return j({ error: 'Belum login' }, 401);
+  if (!allow(user, 'master')) return j({ error: 'Tidak punya akses' }, 403);
+
   const M: any = {
     locations: prisma.location,
     categories: prisma.category,

@@ -5,7 +5,9 @@ import { getUser, j } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 export async function GET(r: Request) {
-  if (!getUser()) return j({ error: 'Belum login' }, 401);
+  const user = getUser();
+  if (!user) return j({ error: 'Belum login' }, 401);
+  if (!['Super Admin', 'Admin'].includes(user.role)) return j({ error: 'Tidak punya akses' }, 403);
   const s = new URL(r.url).searchParams;
   const a = s.get('a'),
     b = s.get('b'),

@@ -1,12 +1,12 @@
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { getUser, j } from '@/lib/auth';
-const ROLES = ['Super Admin', 'Admin', 'Operator', 'Viewer'];
+const ROLES = ['Super Admin', 'Admin', 'Operator'];
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const u = getUser();
-  if (!u) return j({ error: 'Tidak punya akses' }, 403);
+  if (u?.role !== 'Super Admin') return j({ error: 'Tidak punya akses' }, 403);
   try {
     const users = await prisma.user.findMany({
       select: {
