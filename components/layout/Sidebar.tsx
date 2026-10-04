@@ -22,14 +22,8 @@ const navItems: NavItem[] = [
       { label: 'Tambah Pembelian', href: '/pembelian/tambah' },
     ],
   },
-  {
-    label: 'Rekap',
-    icon: 'analytics',
-    children: [
-      { label: 'Rekap Mingguan', href: '/rekap/mingguan' },
-      { label: 'Rekap Bulanan', href: '/rekap/bulanan' },
-    ],
-  },
+  { label: 'Rekap Mingguan', icon: 'analytics', href: '/rekap/mingguan' },
+  { label: 'Rekap Bulanan', icon: 'calendar_month', href: '/rekap/bulanan' },
   { label: 'Lokasi / Gedung', icon: 'location_on', href: '/master/lokasi' },
   { label: 'Kategori', icon: 'category', href: '/master/kategori' },
 ]
@@ -165,14 +159,14 @@ export default function Sidebar({ role, open = false, onClose }: SidebarProps) {
             className="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-on-primary font-bold text-lg flex-shrink-0"
             aria-hidden="true"
           >
-            R
+            <span className="ms text-[22px]" aria-hidden="true">shopping_cart</span>
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-headline-sm font-headline-sm text-primary leading-tight truncate">
               Sistem Pembelian
             </span>
             <span className="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider truncate">
-              LPI Keuangan
+              SB-Mart
             </span>
           </div>
         </div>

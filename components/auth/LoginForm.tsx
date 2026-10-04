@@ -102,10 +102,6 @@ export default function LoginForm() {
               </div>
             ) : null}
 
-            <div className="rounded-xl border border-dashed border-[#edd5c8] bg-[#fffaf7] px-3 py-2 text-xs text-[#6b7280]">
-              Demo login: <span className="font-semibold text-[#4b5563]">super / super123</span>
-            </div>
-
             <Button
               type="submit"
               className="w-full justify-center rounded-xl bg-[#9d4400] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#7d3400]"

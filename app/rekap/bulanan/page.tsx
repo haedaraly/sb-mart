@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import MonthlyBuildingComparisonChart from '@/components/charts/MonthlyBuildingComparisonChart'
 import { formatRupiah } from '@/lib/data/transactions'
 
 interface MonthlyReport {
@@ -86,6 +87,14 @@ export default function RekapBulananPage() {
             </a>
           </div>
         </div>
+
+        {report && !error && (
+          <MonthlyBuildingComparisonChart
+            year={year}
+            months={report.months}
+            rows={report.rows}
+          />
+        )}
 
         <div className="bg-surface-container-lowest rounded-2xl shadow-level-1 border border-[#E2E8F0] overflow-hidden">
           <div className="px-6 py-4 border-b border-[#E2E8F0] flex flex-wrap items-center justify-between gap-2">

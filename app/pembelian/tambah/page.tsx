@@ -30,6 +30,11 @@ function localDate() {
   return `${now.getFullYear()}-${month}-${day}`
 }
 
+function formatPriceInput(value: string) {
+  if (!value) return ''
+  return Number(value).toLocaleString('id-ID')
+}
+
 export default function TambahPembelianPage() {
   const { success, error: toastError } = useToast()
   const [submitting, setSubmitting] = useState(false)
@@ -278,13 +283,14 @@ export default function TambahPembelianPage() {
                     </label>
                     <input
                       id={`item-price-${index}`}
-                      type="number"
-                      min="0"
-                      step="any"
-                      inputMode="decimal"
-                      placeholder="0"
-                      value={item.price}
-                      onChange={(event) => updateItem(index, 'price', event.target.value)}
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="20.000"
+                      value={formatPriceInput(item.price)}
+                      onChange={(event) => {
+                        const digits = event.target.value.replace(/\D/g, '')
+                        updateItem(index, 'price', digits)
+                      }}
                       required
                       className="h-12 w-full rounded-lg border border-[#E2E8F0] bg-surface-container-lowest px-3 text-right font-mono text-body-sm text-on-surface"
                     />

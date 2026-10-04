@@ -63,7 +63,7 @@ export default function SpendingByLocationChart({ data, period }: SpendingByLoca
         </div>
         <span className="ms text-[20px] text-primary">bar_chart</span>
       </div>
-      {data.length ? (
+      {data.length && data.some((location) => location.total > 0) ? (
         <div className="overflow-x-auto">
           <div style={{ minWidth: 320, height: chartHeight }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -101,7 +101,9 @@ export default function SpendingByLocationChart({ data, period }: SpendingByLoca
           </div>
         </div>
       ) : (
-        <p className="py-8 text-center text-body-sm text-on-surface-variant">Belum ada data gedung.</p>
+        <p className="py-8 text-center text-body-sm text-on-surface-variant">
+          Belum ada data pengeluaran untuk periode ini.
+        </p>
       )}
     </div>
   )
