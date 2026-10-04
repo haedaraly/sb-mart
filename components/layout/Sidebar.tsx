@@ -30,15 +30,8 @@ const navItems: NavItem[] = [
       { label: 'Rekap Bulanan', href: '/rekap/bulanan' },
     ],
   },
-  {
-    label: 'Master Data',
-    icon: 'database',
-    children: [
-      { label: 'Lokasi / Gedung', href: '/master/lokasi' },
-      { label: 'Barang', href: '/master/barang' },
-      { label: 'Kategori', href: '/master/kategori' },
-    ],
-  },
+  { label: 'Lokasi / Gedung', icon: 'location_on', href: '/master/lokasi' },
+  { label: 'Kategori', icon: 'category', href: '/master/kategori' },
 ]
 
 const superAdminItems: NavItem[] = [
@@ -134,41 +127,21 @@ function NavGroup({
 }
 
 interface SidebarProps {
+  role: string | null
   /** Mobile: is the drawer open? */
   open?: boolean
   onClose?: () => void
 }
 
-export default function Sidebar({ open = false, onClose }: SidebarProps) {
+export default function Sidebar({ role, open = false, onClose }: SidebarProps) {
   const pathname = usePathname()
-  const [role, setRole] = useState<string | null | undefined>(undefined)
-
-  useEffect(() => {
-    let active = true
-    fetch('/api/me', { cache: 'no-store' })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('Gagal memuat profil pengguna')
-        return response.json()
-      })
-      .then((user: { role: string }) => {
-        if (active) setRole(user.role)
-      })
-      .catch((error) => {
-        console.error('Gagal memuat role navigasi:', error)
-      })
-    return () => {
-      active = false
-    }
-  }, [])
 
   const isOperator = role === 'Operator'
-  const visibleNavItems = role === undefined
-    ? []
-    : isOperator
-      ? [{ label: 'Tambah Pembelian', icon: 'add_shopping_cart', href: '/pembelian/tambah' }]
-      : role === 'Super Admin' || role === 'Admin'
-        ? navItems.filter((item) => item.label !== 'Pembelian')
-        : []
+  const visibleNavItems = isOperator
+    ? [{ label: 'Tambah Pembelian', icon: 'add_shopping_cart', href: '/pembelian/tambah' }]
+    : role === 'Super Admin' || role === 'Admin'
+      ? navItems.filter((item) => item.label !== 'Pembelian')
+      : []
   const visibleAdminItems = role === 'Super Admin' ? superAdminItems : []
 
   return (

@@ -16,7 +16,12 @@ export async function GET(r: Request) {
 
   const ps = await prisma.purchase.findMany({
     where: {
-      ...(a || b ? { date: { ...(a ? { gte: new Date(a) } : {}), ...(b ? { lte: new Date(b) } : {}) } } : {}),
+      ...(a || b ? {
+        date: {
+          ...(a ? { gte: new Date(`${a}T00:00:00.000Z`) } : {}),
+          ...(b ? { lte: new Date(`${b}T23:59:59.999Z`) } : {}),
+        },
+      } : {}),
       ...(g ? { location: { code: g } } : {}),
     },
     include: { items: true, location: true, creator: true },
